@@ -91,7 +91,6 @@ void RotateQ(struct TCB_t **headA)
 {
 	if(*headA==NULL)
 		{
-		printf("								Queue is Empty .. No Process is running... \n");
 		}
 
 	else  
@@ -101,7 +100,6 @@ void RotateQ(struct TCB_t **headA)
 		firstNode=*headA;
 		if(firstNode->next==firstNode)
 				{
-				printf("							Only one element in Q .. \n");
 				}
 		else
 				{
@@ -110,5 +108,30 @@ void RotateQ(struct TCB_t **headA)
 		}
 }
 
+void printQueue(struct TCB_t **headA)
+{
+	if(*headA==NULL)
+		{
+		printf("Queue is Empty .. \n");
+		}
+
+	else   /// queue not empty.
+		{
+		struct TCB_t *firstNode;
+		struct TCB_t *runNode;
+		firstNode=*headA;
+		runNode=firstNode;
+			if(firstNode->next!=NULL)
+				{
+				  do{
+					
+					printf("%d ", runNode->pid);
+					runNode=runNode->next;
+					
+				  }while(runNode!=firstNode);
+				}			
+		}
+	
+}
 
 #endif

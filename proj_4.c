@@ -35,43 +35,35 @@ struct pair_int_int {
 /********************
  * Gobal Variables
  ********************/
-int globalInt = 0;
 
 struct TCB_t *runQ = NULL;
 
-struct semaphore *rsem = NULL, *wsem = NULL, *mutex = NULL;
+struct semaphore *rmutex = NULL, *wmutex = NULL,  *mutex = NULL;
 
 int rc = 0; //reader count
 int rwc = 0; //reader waiting count
 int wwc = 0; //writer waiting count
 int wc = 0; //write count
-int test[3] = {1,2,3};
-int read = 1;
-int write = 1;
+int resource_val = 0;
 
 /********************
  * Function Prototypes
  ********************/
-void reader();
-void writer();
-
-/*************************
- * Function Pointers
-************************/
-void (*r1)();
-void (*r2)();
-void (*r3)();
-void (*w1)();
-void (*w2)();
+void reader(int);
+void writer(int);
+void readerEntry();
+void readerExit();
+void writerEntry();
+void writerExit();
 
 int main() {
 	int numReader = 0, numWriter = 0;
-	scanf("%d,%d,%d,%d", &numReader, &numWriter);
+	scanf("%d,%d", &numReader, &numWriter);
 	struct TCB_t *threads[numReader + numWriter];
 
-
+	InitQueue(&runQ);
 	int i;
-	for (i = 0; i < numReader + numReader; i++) {
+	for (i = 0; i < numReader + numWriter; i++) {
 		int pid;
 		scanf("%d", &pid);
 		if (pid > 0)
@@ -80,114 +72,101 @@ int main() {
 			startThread(threads[i], writer, numWriter, pid);
 	}
 
-	InitQueue(&runQ);
 
 	mutex = (struct semaphore *)malloc(sizeof(struct semaphore));
 	//InitQueue(mutex->queue);
 	InitSem(mutex, 1);
 
-	rsem = (struct semaphore *)malloc(sizeof(struct semaphore));
+	rmutex = (struct semaphore *)malloc(sizeof(struct semaphore));
 	//InitQueue(rsem->queue);
-	InitSem(rsem,0);
+	InitSem(rmutex,1);
 
-	wsem = (struct semaphore *)malloc(sizeof(struct semaphore));
+	wmutex = (struct semaphore *)malloc(sizeof(struct semaphore));
 	//InitQueue(wsem->queue);
-	InitSem(wsem,0);
-
-	r1 = reader;
-	r2 = reader;
-	r3 = reader;
-	w1 = writer;
-	w2 = writer;
-
-	/*************************
-	 * Initialize Threads
-	 *************************/
-	start_thread(r1);
-	start_thread(w1);
-	start_thread(w2);
-	start_thread(r2);
-	start_thread(r3);
+	InitSem(wmutex,1);
 
 	run(); //starts the first thread
 	return 0;
 }
 
-void reader()
+void reader(int pid)
 {
-//  printf("----Reader %d: %p----\n", read, runQ->head);
-read++;
-char str[80];
-sprintf(str, "\n Producer %d is waiting \n", pid);	
- while(1){
-	// Reader enter
-	P(mutex, str);	
-	if(wwc>0 || wc>0) {
-		rwc++;
-		V(mutex);
-		P(rsem);
-		rwc--;
+	int turn=0;
+	char *first="first";
+	char *second="second";
+	while(++turn<3){
+		readerEntry();
+		printf("\nThis is the %d th reader reading value i = %d for the %s time" , pid, resource_val, turn == 1 ? first : second);
+		readerExit();
+		if (turn<2)
+			yield();
 	}
-	
-	rc++;
-	if(rwc>0)
-		V(rsem);
-	else
-		V(mutex);
-
-
-	//CS - read occurs here
-	//printf("Reader %p\n", runQ->head);
-	printf("Reading array: %d %d %d\n", test[0], test[1], test[2]);
-
-	// Reader exit
-	P(mutex, str);
-	rc--;
-	if(rc==0 && wwc>0)
-		V(wsem);
-	else
-		V(mutex);
- }	
+	// exit reader and give CPU to next thread in queue
+	struct TCB_t *temp= DelQueue(&runQ);
+	if(temp!=NULL && runQ!=NULL)
+		swapcontext(&(temp->context),&(runQ->context));
 }
 
-void writer()
+
+void writer(int pid)
 {
- int i;
- //printf("----Writer %d: %p----\n", write, RunQ->head);
- write++;
-char str[80];
-sprintf(str, "\n Consumer %d is waiting \n", -pid);
-  while(1) {
-	// Writer enter
-	P(mutex, str);
-	if(rc>0 || wc>0) {
+	writerEntry();
+	printf("\nThis is the %d th writer writing value i = %d", -pid, ++resource_val);
+	writerExit();
+	yield();
+	readerEntry();
+	printf("\nThis is the %d th writer verifying value i = %d", -pid, resource_val);
+	readerExit();
+
+	// exit writer and give CPU to next thread in queue
+	struct TCB_t *temp= DelQueue(&runQ);
+	if(temp!=NULL && runQ!=NULL)
+		swapcontext(&(temp->context),&(runQ->context));
+
+}
+
+void readerEntry(){
+	P(mutex);
+	if(wwc>0 || wc>0){
+		rwc++;
+		V(mutex);
+		P(rmutex);
+		P(mutex);
+		rwc--;
+	}
+	rc++;
+	V(mutex);
+}
+
+void readerExit(){
+	P(mutex);
+	rc--;
+	if(rc==0 && wwc>0) 
+		V(wmutex);
+	V(mutex);
+}
+
+void writerEntry(){
+	P(mutex);
+    if(rc>0 || wc>0 || rwc>0 || wwc>0) {
 		wwc++;
 		V(mutex);
-		P(wsem, str);
+		P(wmutex);
+		P(mutex);
 		wwc--;
 	}
-	
 	wc++;
 	V(mutex);
+}
 
-
-	//CS - write occurs here
-	//printf("Writer %p\n", RunQ->head);
-	for (i = 0; i < 3; i++) {
-		test[i] = test[i] * 4;
-	}
-	printf("Writing array: %d %d %d\n", test[0], test[1], test[2]);
-
-	// Writer exit
-	P(mutex, str);
+void writerExit(){
+	P(mutex);
 	wc--;
-	if(rwc>0)
-		V(rsem);
-	else {
-		if(wwc>0)
-			V(wsem);
-		else
-			V(mutex);
+	if(rwc>0) {
+		for (int i=0;i<rwc;i++) 
+			V(rmutex);
 	}
- }
+	else if (wwc>0) 
+		V(wmutex);
+	V(mutex);
 }

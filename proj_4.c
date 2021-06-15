@@ -114,9 +114,9 @@ void writer(int pid)
 	printf("\nThis is the %d th writer writing value i = %d", -pid, ++resource_val);
 	writerExit();
 	yield();
-	readerEntry();
+	writerEntry();
 	printf("\nThis is the %d th writer verifying value i = %d", -pid, resource_val);
-	readerExit();
+	writerExit();
 
 	// exit writer and give CPU to next thread in queue
 	struct TCB_t *temp= DelQueue(&runQ);
@@ -131,11 +131,13 @@ void readerEntry(){
 		rwc++;
 		V(mutex);
 		P(rmutex);
-		P(mutex);
 		rwc--;
 	}
 	rc++;
-	V(mutex);
+	if(rwc>0)
+		V(rmutex);
+	else
+		V(mutex);
 }
 
 void readerExit(){
@@ -148,11 +150,10 @@ void readerExit(){
 
 void writerEntry(){
 	P(mutex);
-    if(rc>0 || wc>0 || rwc>0 || wwc>0) {
+    if(rc>0 || wc>0) {
 		wwc++;
 		V(mutex);
 		P(wmutex);
-		P(mutex);
 		wwc--;
 	}
 	wc++;
@@ -162,11 +163,9 @@ void writerEntry(){
 void writerExit(){
 	P(mutex);
 	wc--;
-	if(rwc>0) {
-		for (int i=0;i<rwc;i++) 
-			V(rmutex);
+	if(rwc>0) {	
+		V(rmutex);
 	}
 	else if (wwc>0) 
 		V(wmutex);
-	V(mutex);
 }

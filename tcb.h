@@ -16,14 +16,14 @@ struct TCB_t {
      int pid;
 };
 
-void init_TCB(struct TCB_t *tcb, void (*function)(int, int,int),int buffer_size,int pid, int maxLoops, void *stack, int stack_size)
+void init_TCB(struct TCB_t *tcb, void (*function)(int), int pid, void *stack, int stack_size)
 {
     memset(tcb, '\0', sizeof(struct TCB_t));     
     getcontext(&tcb->context);              
     tcb->context.uc_stack.ss_sp = stack;
     tcb->context.uc_stack.ss_size = (size_t) stack_size;
     tcb->pid=pid;
-    makecontext(&tcb->context, function, 3, buffer_size, pid, maxLoops);
+    makecontext(&tcb->context, function, 1, pid);
 }
 
 #endif

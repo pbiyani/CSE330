@@ -7,11 +7,11 @@
 
 extern struct TCB_t *runQ;
 // Thread is being started
-void startThread(struct TCB_t *thread, void (*function)(int,int,int), int buffer_size, int pid, int maxLoops)
+void startThread(struct TCB_t *thread, void (*function)(int), int buffer_size, int pid)
 {
 	void *stack = (void *)malloc(8192);
 	thread = (struct TCB_t *)malloc(sizeof(struct TCB_t));
-	init_TCB(thread, function, buffer_size, pid, maxLoops, stack, 8192);
+	init_TCB(thread, function, pid, stack, 8192);
 
 	AddQueue(&runQ, thread);
 }

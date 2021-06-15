@@ -17,21 +17,19 @@ void InitSem(struct semaphore *semA, int value)
 	InitQueue(&(semA->q));	
 }
 
-void P(struct semaphore *semA, char* msg) // similar to run
+void P(struct semaphore *semA) // similar to run
 {
 	struct TCB_t *temp;
-	
 MYLABEL:semA->sem = semA->sem- 1;
    	if(semA->sem < 0)
 	{	
 		semA->sem=0;
-		if(msg !=NULL)
-			printf("%s", msg);
 		struct TCB_t *temp;	
 		temp=DelQueue(&runQ); // Deletes a thread
 		AddQueue(&(semA->q),temp);
-		//printf("Run Queue");
-		//printQueue(&runQ);
+		printf("\nRunQ (P): ");
+		printQueue(&runQ);
+
 		if (runQ == NULL)
 			exit(0);
 		swapcontext(&(temp->context),&(runQ->context));
@@ -41,20 +39,15 @@ MYLABEL:semA->sem = semA->sem- 1;
 
 void V(struct semaphore *semA)
 {
-	struct TCB_t *temp;
-	
-	
-	(semA->sem)++;
-	
-		temp=DelQueue(&(semA->q)); // Deletes a thread
-		if(temp!=NULL)
-		{
-			//printf("Run Queue V");
-			AddQueue(&runQ,temp);
-			//printQueue(&runQ);
-			
-		}
-
+	struct TCB_t *temp;		
+	(semA->sem)++;	
+	temp=DelQueue(&(semA->q)); // Deletes a thread
+	if(temp!=NULL)
+	{
+		AddQueue(&runQ,temp);
+	}
+	printf("\nRunQ (V):");
+	printQueue(&runQ);
 	yield();
 }
 

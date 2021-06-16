@@ -1,3 +1,9 @@
+#include "sem.h"
+
+#define MAX_BUFFER_SIZE 1024
+#define NUM_THREADS 3
+
+
 struct TCB_t *runQ = NULL;
 
 struct semaphore *rmutex = NULL, *wmutex = NULL,  *mutex = NULL;
@@ -97,7 +103,7 @@ void readerEntry(){
 		rwc--;
 	}
 	if(rwc > 0){
-		v(rmutex);
+		V(rmutex);
 	}
 	 else{
 	 	V(mutex);

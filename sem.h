@@ -27,8 +27,6 @@ MYLABEL:semA->sem = semA->sem- 1;
 		struct TCB_t *temp;	
 		temp=DelQueue(&runQ); // Deletes a thread
 		AddQueue(&(semA->q),temp);
-		printf("\nRunQ (P): ");
-		printQueue(&runQ);
 
 		if (runQ == NULL)
 			exit(0);
@@ -46,8 +44,6 @@ void V(struct semaphore *semA)
 	{
 		AddQueue(&runQ,temp);
 	}
-	printf("\nRunQ (V):");
-	printQueue(&runQ);
 	yield();
 }
 

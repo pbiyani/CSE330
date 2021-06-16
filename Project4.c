@@ -1,40 +1,8 @@
-/************************************************
- * Operating Systems CSE 430
- * Project 4 - Readers and Writers
- *
- * Copyright (c) 2015
- *      Sydney Vanda
- *      Brittney RUssell
- *
- *  Module Name:
- *      \file proj-4.c
- *
- *  Description:
- *      \Readers and Writers problem with semaphores
- * 	Addressing readers/writers version 1: Reader's Preference
- *	In order to test the code - an array was created with 3 values (initially 1,2,3)
- * 	These values were read from the array, and upon a write, every value in the array was 
- *	multiplied by 4 to indicate a write was made. 
- *	Thread order of 3 readers and 2 writers are printed at the beginning once run along with
- *	function pointers of each thread for convenience and understanding (the function pointer
- *	for each thread is printed with each array as well for easy debugging).
- *
- ***********************************************/
-
 #include "sem.h"
 
 #define MAX_BUFFER_SIZE 1024
 #define NUM_THREADS 3
 
-
-struct pair_int_int {
-    int item;
-    int pid;
-} buffer[MAX_BUFFER_SIZE];
-
-/********************
- * Gobal Variables
- ********************/
 
 struct TCB_t *runQ = NULL;
 
@@ -114,9 +82,9 @@ void writer(int pid)
 	printf("\nThis is the %d th writer writing value i = %d", -pid, ++resource_val);
 	writerExit();
 	yield();
-	writerEntry();
+	readerEntry();
 	printf("\nThis is the %d th writer verifying value i = %d", -pid, resource_val);
-	writerExit();
+	readerExit();
 
 	// exit writer and give CPU to next thread in queue
 	struct TCB_t *temp= DelQueue(&runQ);
@@ -126,34 +94,43 @@ void writer(int pid)
 }
 
 void readerEntry(){
-	P(mutex);
-	if(wwc>0 || wc>0){
-		rwc++;
-		V(mutex);
+	 P(mutex);
+     if(wwc>0 || wc>0){
+	 	rwc++;
+	 	V(mutex);
 		P(rmutex);
+	// 	P(mutex);
 		rwc--;
 	}
-	rc++;
-	if(rwc>0)
+	if(rwc > 0){
 		V(rmutex);
-	else
-		V(mutex);
+	}
+	 else{
+	 	V(mutex);
+	 }
+	 
+
 }
 
 void readerExit(){
 	P(mutex);
 	rc--;
-	if(rc==0 && wwc>0) 
+	if(rc==0 && wwc>0){
 		V(wmutex);
-	V(mutex);
+	} 
+	else{
+		V(mutex);
+	}	
 }
 
 void writerEntry(){
 	P(mutex);
-    if(rc>0 || wc>0) {
+	//|| rwc>0 || wwc>0
+    if(rc>0 || wc>0 ) {
 		wwc++;
 		V(mutex);
 		P(wmutex);
+		//P(mutex);
 		wwc--;
 	}
 	wc++;
@@ -163,9 +140,11 @@ void writerEntry(){
 void writerExit(){
 	P(mutex);
 	wc--;
-	if(rwc>0) {	
+	if(rwc>0) {
+		//for (int i=0;i<rwc;i++) 
 		V(rmutex);
 	}
-	else if (wwc>0) 
+	else if (wwc>0){
 		V(wmutex);
+	} 
 }
